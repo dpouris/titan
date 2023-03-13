@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# check if binary is already linked, if so remove it
+ttt_exists=/usr/local/bin/grile
+if [ -f "$ttt_exists" ]; then
+    sudo rm -rf /usr/local/bin/ttt /usr/local/lib/grile
+fi
+
+cargo build --release
+
+sudo cp target/release/grile /usr/local/lib
+sudo ln -s /usr/local/lib/grile /usr/local/bin/grile
