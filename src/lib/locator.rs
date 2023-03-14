@@ -4,7 +4,7 @@ use regex::Regex;
 use std::{
     fmt::Display,
     fs::File,
-    io::{BufRead, BufReader},
+    io::{BufRead, BufReader, Read},
     os::unix::prelude::MetadataExt,
     path::PathBuf, thread, sync::atomic::Ordering, time::Duration,
 };
@@ -29,7 +29,7 @@ impl Match {
 
 impl Display for Match {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&format!("#{}: {}", self.location, self.content.clone()))
+        f.write_str(&format!("{}: {}", self.location, self.content.clone()))
     }
 }
 
@@ -131,12 +131,17 @@ fn search_dir(options: &Options, pattern: String, dir_path: &PathBuf) -> Generic
                 // add 1 to thread count
                 GLOBAL_THREAD_COUNT.fetch_add(1, Ordering::SeqCst);
                 thread::spawn(move || {
-                    search_file(t_pattern.clone(), &t_path).expect("could not search file");
+                    if let Err(_) = search_file(t_pattern.clone(), &t_path) {
+                        GLOBAL_THREAD_COUNT.fetch_sub(1, Ordering::SeqCst);
+                        return
+                    }
                     // remove 1 from thread count
                     GLOBAL_THREAD_COUNT.fetch_sub(1, Ordering::SeqCst);
                 });
             } else {
-                search_file(pattern.clone(), &path)?;
+                if let Err(_) = search_file(pattern.clone(), &path) {
+                    return Ok(());
+                };
             }
         }
 
@@ -148,39 +153,77 @@ fn search_dir(options: &Options, pattern: String, dir_path: &PathBuf) -> Generic
     Ok(())
 }
 
-fn search_file(pattern: String, file_path: &PathBuf) -> GenericResult<()> {
-    let file = File::open(file_path);
-    if let Err(reason) = file {
-        handle_cannot_open_path(file_path.display().to_string(), reason.to_string());
-        return Ok(());
+    fn read_chunks<R: Read>(mut reader: BufReader<R>, chunk_size: usize) -> Vec<String> {
+        let mut chunks = vec![];
+
+        let mut chunk = String::with_capacity(chunk_size);
+        let bytes_read = reader.read_line(&mut chunk);
+        if let Err(_) = bytes_read {
+            return vec![];
+        }
+        let mut bytes_read = bytes_read.unwrap();
+        while bytes_read > 0 {
+            let remaining_capacity = chunk_size - chunk.len();
+            if remaining_capacity < bytes_read {
+                // If the remaining capacity in the chunk is not enough to hold the entire next line, split the line
+                let split_pos = remaining_capacity + chunk.as_bytes()[remaining_capacity..].iter().position(|b| *b == b'\n').unwrap_or(bytes_read - remaining_capacity);
+                let rest = chunk.split_off(split_pos);
+                chunks.push(chunk);
+                chunk = rest;
+            }
+
+            bytes_read = match reader.read_line(&mut chunk) {
+                Err(_) => 0,
+                Ok(bytes) => bytes
+            }
+        }
+
+        // Add the last chunk if there is any remaining data
+        if chunk.len() > 0 {
+            chunks.push(chunk);
+        }
+
+        chunks
     }
 
-    let file = file?;
-    let file_len = file.metadata()?.size() as usize;
-    let file_buffer = BufReader::with_capacity(file_len, file);
-    let mut matches: Vec<Match> = vec![];
-
-    for (idx, line) in file_buffer.lines().enumerate() {
-        if let Err(_) = line {
-            continue;
-        }
-        let line = line?;
+fn process_chunk(pattern: String, chunk: String) -> Vec<Match> {
+    let mut matches = vec![];
+    let mut line_idx = 0;
+    for line in chunk.lines() {
+        line_idx += 1;
         if !line.contains(&pattern) {
             continue;
         }
-        
+
         let idx_of_match = line.find(&pattern).unwrap();
         let pattern_match = line.split_at(idx_of_match).1.split_at(pattern.len()).0;
-        // self.amount += line.matches(&pattern).collect::<Vec<&str>>().len();
         let line = line.replace(&pattern, &pattern_match.to_color(Color::Red));
         let new_match = Match::new(
             line.trim().to_string(),
-            (idx + 1).to_string().as_str().to_color(Color::Yellow),
+            format!("{}", line_idx).as_str().to_color(Color::Yellow),
         );
-        matches.push(new_match);
-    }
 
-    if matches.len() > 0 {
+        matches.push(new_match)
+    }
+    matches
+}
+
+fn search_file(pattern: String, file_path: &PathBuf) -> GenericResult<()> {
+    let file = File::open(file_path)?;
+    let buf_reader = BufReader::new(&file);
+    
+    let chunk_size = 1024 * 1024; // 1 MB
+    
+    let chunks = read_chunks(buf_reader, chunk_size);
+    
+    let handles = chunks.into_iter().map(|chunk| {
+        let pattern_clone = pattern.clone();
+        thread::spawn(move || process_chunk(pattern_clone, chunk))
+    }).collect::<Vec<_>>();
+
+    let matches = handles.into_iter().map(|handle| handle.join().unwrap()).flatten().collect::<Vec<_>>();
+
+    if !matches.is_empty() {
         println!(
             "\n{}",
             file_path.display().to_string().to_color(Color::Blue)
