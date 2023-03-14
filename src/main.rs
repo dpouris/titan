@@ -3,9 +3,11 @@ mod lib;
 
 use cli::Cli;
 use lib::utils::{Color, Colorize};
-use std::{error::Error, time};
+use std::{error::Error, time::{self, Duration}, sync::atomic::{AtomicUsize, Ordering}, thread};
 
 pub type GenericResult<T> = Result<T, Box<dyn Error>>;
+
+static GLOBAL_THREAD_COUNT: AtomicUsize = AtomicUsize::new(0);
 
 fn main() -> GenericResult<()> {
     let mut cli = Cli::new();
@@ -22,7 +24,13 @@ fn main() -> GenericResult<()> {
 
     locator.search(&path)?;
 
-    println!("\nLocator found {} match(es) in `{}` and took {}μs",
+    // block until all threads are done
+    while GLOBAL_THREAD_COUNT.load(Ordering::SeqCst) != 0 {
+        thread::sleep(Duration::from_millis(1)); 
+    }
+
+    println!(
+        "\nLocator found {} match(es) in `{}` and took {}μs",
         locator.amount,
         &path.display(),
         start
@@ -31,7 +39,6 @@ fn main() -> GenericResult<()> {
             .to_string()
             .to_color(Color::Blue)
     );
-
 
     Ok(())
 }
