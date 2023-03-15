@@ -50,6 +50,12 @@ impl Locator {
     }
 
     pub fn search(&mut self, path: &PathBuf) -> GenericResult<()> {
+        if let Some(ext) = path.extension() {
+            if self.options.ignore.contains(&ext.to_str().unwrap().to_string()) {
+                return Ok(());
+            }
+        }
+
         if path.is_file() {
             search_file(self.pattern.clone(), &path)?;
         } else if path.is_dir() {
@@ -62,11 +68,6 @@ impl Locator {
 
 fn search_dir(options: &Options, pattern: String, dir_path: &PathBuf) -> GenericResult<()> {
     // if file extension is in options.ignore
-    if let Some(ext) = dir_path.extension() {
-        if options.ignore.contains(&ext.to_str().unwrap().to_string()) {
-            return Ok(());
-        }
-    }
 
     let dir = dir_path.read_dir();
 
