@@ -1,9 +1,15 @@
 mod cli;
-mod locate;
 mod color;
+mod locator;
+mod options;
 
 use cli::Cli;
-use std::{error::Error, time::{Duration}, sync::atomic::{AtomicUsize, Ordering}, thread};
+use std::{
+    error::Error,
+    sync::atomic::{AtomicUsize, Ordering},
+    thread,
+    time::Duration,
+};
 
 pub type GenericResult<T> = Result<T, Box<dyn Error>>;
 
@@ -24,7 +30,7 @@ fn main() -> GenericResult<()> {
 
     // block until all threads are done
     while GLOBAL_THREAD_COUNT.load(Ordering::SeqCst) != 0 {
-        thread::sleep(Duration::from_millis(1)); 
+        thread::sleep(Duration::from_millis(1));
     }
 
     Ok(())

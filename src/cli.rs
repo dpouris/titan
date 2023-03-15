@@ -1,12 +1,16 @@
-use crate::locate::{Locator, LocatorOptions};
-use crate::GenericResult;
-
-use super::parser::parse_args;
 use std::{env::args, path::PathBuf};
+
+use crate::GenericResult;
+use crate::{locator::Locator, options::Options};
+
+pub use self::parser::{parse_args, ArgKey};
+
 pub struct Cli {
     pub pattern: Option<String>,
     pub path: Option<PathBuf>,
 }
+
+mod parser;
 
 impl Cli {
     pub fn new() -> Self {
@@ -19,7 +23,7 @@ impl Cli {
     pub fn parse(&mut self) -> GenericResult<Locator> {
         let arguments = &args().collect::<Vec<String>>()[1..];
         let parsed_args = parse_args(arguments);
-        let mut options = LocatorOptions::new();
+        let mut options = Options::new();
 
         for arg in parsed_args {
             options.update(&arg);

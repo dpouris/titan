@@ -1,6 +1,5 @@
 use std::fmt::Display;
 
-
 #[derive(Clone, Copy)]
 pub enum Color {
     Red = 31,
@@ -20,4 +19,4 @@ pub trait Colorize: Display {
     }
 }
 
-impl<T> Colorize for T where T: Display{}
+impl<T> Colorize for T where T: Display {}
