@@ -1,11 +1,9 @@
-use super::utils::{Color, Colorize};
+use crate::color::{Color, Colorize};
 use crate::{cli::ArgKey, GenericResult, GLOBAL_THREAD_COUNT};
-use regex::Regex;
 use std::{
     fmt::Display,
     fs::File,
     io::{BufRead, BufReader, Read},
-    os::unix::prelude::MetadataExt,
     path::PathBuf, thread, sync::atomic::Ordering, time::Duration,
 };
 
@@ -125,7 +123,7 @@ fn search_dir(options: &Options, pattern: String, dir_path: &PathBuf) -> Generic
                 let t_path = path.clone();
                 // if active threads surpass 20 block from spawning a new one.
                 // like a queue
-                while GLOBAL_THREAD_COUNT.load(Ordering::SeqCst) > 20 {
+                while GLOBAL_THREAD_COUNT.load(Ordering::SeqCst) > 30 {
                     thread::sleep(Duration::from_millis(1));
                 }
                 // add 1 to thread count
@@ -199,8 +197,8 @@ fn process_chunk(pattern: String, chunk: String) -> Vec<Match> {
         let pattern_match = line.split_at(idx_of_match).1.split_at(pattern.len()).0;
         let line = line.replace(&pattern, &pattern_match.to_color(Color::Red));
         let new_match = Match::new(
-            line.trim().to_string(),
-            format!("{}", line_idx).as_str().to_color(Color::Yellow),
+            line.trim().to_owned(),
+            format!("{}", line_idx).to_color(Color::Yellow),
         );
 
         matches.push(new_match)
@@ -224,16 +222,12 @@ fn search_file(pattern: String, file_path: &PathBuf) -> GenericResult<()> {
     let matches = handles.into_iter().map(|handle| handle.join().unwrap()).flatten().collect::<Vec<_>>();
 
     if !matches.is_empty() {
-        println!(
-            "\n{}",
-            file_path.display().to_string().to_color(Color::Blue)
-        );
         let matches = matches
             .iter()
             .map(|m| format!("{m}"))
             .collect::<Vec<String>>()
             .join("\n");
-        println!("{matches}");
+        println!("\n{}\n{matches}",file_path.display().to_color(Color::Blue));
     }
 
     Ok(())

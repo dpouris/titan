@@ -1,4 +1,4 @@
-use crate::lib::{Locator, LocatorOptions};
+use crate::locate::{Locator, LocatorOptions};
 use crate::GenericResult;
 
 use super::parser::parse_args;

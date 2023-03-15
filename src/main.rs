@@ -1,5 +1,6 @@
 mod cli;
-mod lib;
+mod locate;
+mod color;
 
 use cli::Cli;
 use std::{error::Error, time::{Duration}, sync::atomic::{AtomicUsize, Ordering}, thread};
