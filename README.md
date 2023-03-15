@@ -7,9 +7,9 @@ TITAN is a command-line program written in Rust that allows you to quickly searc
 To install TITAN, you can use the following command to clone the repository and run the included installation script:
 
 ```sh
-$ git clone https://github.com/your_username/titan.git
+$ git clone https://github.com/dpouris/titan.git
 $ cd titan
-$ ./install.sh
+$ ./install
 ```
 
 This will download the latest version of TITAN from the official GitHub repository and install it on your system.
