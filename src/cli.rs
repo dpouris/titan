@@ -1,5 +1,6 @@
 use std::{env::args, path::PathBuf};
 
+use crate::worker::threadpool::ThreadPool;
 use crate::GenericResult;
 use crate::{locator::Locator, options::Options};
 
@@ -55,7 +56,11 @@ impl Cli {
         self.pattern = Some(arguments[0].to_owned());
         self.path = Some(path);
 
-        Ok(Locator::new(arguments[0].to_owned(), options))
+        Ok(Locator::new(
+            ThreadPool::new(17),
+            arguments[0].to_owned(),
+            options,
+        ))
     }
 
     pub fn exit(reason: Option<&str>) -> ! {

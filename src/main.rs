@@ -2,6 +2,7 @@ mod cli;
 mod color;
 mod locator;
 mod options;
+mod worker;
 
 use cli::Cli;
 use std::{
@@ -27,6 +28,8 @@ fn main() -> GenericResult<()> {
     );
 
     locator.search(&path)?;
+
+    locator.join_all_threads();
 
     // block until all threads are done
     while GLOBAL_THREAD_COUNT.load(Ordering::SeqCst) != 0 {

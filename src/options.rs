@@ -6,7 +6,7 @@ pub struct Options {
     pub ignore: Vec<String>,
     pub include_ext: Vec<String>,
     pub is_recursive: bool,
-    pub is_verbose: bool,
+    pub invert_match: bool,
     pub show_help: bool,
     pub hidden: bool,
 }
@@ -18,7 +18,7 @@ impl Options {
             ignore: vec![],
             include_ext: vec![],
             is_recursive: false,
-            is_verbose: false,
+            invert_match: false,
             show_help: false,
             hidden: false,
         }
@@ -28,13 +28,13 @@ impl Options {
         match arg {
             ArgKey::Short(short_key) => match *short_key {
                 "r" => self.is_recursive = true,
-                "v" => self.is_verbose = true,
+                "v" => self.invert_match = true,
                 _ => {}
             },
             ArgKey::Long(long_key) => match *long_key {
                 "single-thread" => self.is_parallel = false,
                 "recursive" => self.is_recursive = true,
-                "verbose" => self.is_verbose = true,
+                "invert-match" => self.invert_match = true,
                 "help" => self.show_help = true,
                 "hidden" => self.hidden = true,
                 _ => {}
