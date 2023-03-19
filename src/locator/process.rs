@@ -42,7 +42,7 @@ pub(crate) fn read_chunks<R: Read>(mut reader: BufReader<R>, chunk_size: usize) 
 }
 
 pub(crate) fn process_chunk(pattern: &String, chunk: String, invert: bool) -> Vec<Match> {
-    let mut matches = vec![];
+    let mut matches = Vec::with_capacity(chunk.lines().count());
     let mut line_idx = 0;
     for line in chunk.lines() {
         line_idx += 1;
@@ -51,17 +51,15 @@ pub(crate) fn process_chunk(pattern: &String, chunk: String, invert: bool) -> Ve
                 line.to_owned(),
                 line_idx.to_color(Color::Yellow),
             ));
-            continue;
+        } 
+        
+        if !invert && line.contains(pattern){
+            let line = line.replace(pattern, &pattern.to_color(Color::Red));
+            let new_match = Match::new(line.to_owned(), line_idx.to_color(Color::Yellow));
+    
+            matches.push(new_match)
         }
 
-        if !line.contains(pattern) {
-            continue;
-        }
-
-        let line = line.replace(pattern, &pattern.to_color(Color::Red));
-        let new_match = Match::new(line.to_owned(), line_idx.to_color(Color::Yellow));
-
-        matches.push(new_match)
     }
     matches
 }

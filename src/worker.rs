@@ -6,7 +6,7 @@ use std::{
 pub mod threadpool;
 
 struct Worker {
-    id: usize,
+    _id: usize,
     thread: JoinHandle<()>,
 }
 
@@ -36,6 +36,6 @@ impl Worker {
             job.call_box()
         });
 
-        Self { id, thread }
+        Self { _id: id, thread }
     }
 }

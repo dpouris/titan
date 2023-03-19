@@ -1,3 +1,4 @@
+use std::io::{self, BufRead};
 use std::{env::args, path::PathBuf};
 
 use crate::worker::threadpool::ThreadPool;
@@ -5,6 +6,8 @@ use crate::GenericResult;
 use crate::{locator::Locator, options::Options};
 
 pub use self::parser::{parse_args, ArgKey};
+
+extern crate atty;
 
 pub struct Cli {
     pub pattern: Option<String>,
@@ -22,8 +25,7 @@ impl Cli {
     }
 
     pub fn parse(&mut self) -> GenericResult<Locator> {
-        let arguments = &args().collect::<Vec<String>>()[1..];
-        let parsed_args = parse_args(arguments);
+        let (pattern, path, parsed_args) = parse_args(args());
         let mut options = Options::new();
 
         for arg in parsed_args {
@@ -35,30 +37,43 @@ impl Cli {
             Self::exit(None)
         }
 
-        if arguments.len() == 0 {
-            Self::exit(Some("missing <pattern> and <path> arguments"))
+        if pattern.is_none() && path.is_none() {
+            Self::exit(Some("missing <pattern> argument"))
         }
 
-        if arguments.len() == 1 {
-            Self::exit(Some("missing <path> argument"))
-        }
+        let path = match path {
+            Some(path) => path,
+            None => {
+                if !atty::is(atty::Stream::Stdin) {
+                    let content: Vec<String> = io::stdin()
+                        .lock()
+                        .lines().filter(|line| line.is_ok()).map(|line| line.unwrap()).collect();
+                    PathBuf::from(content.join("\n"))
+                } else {
+                    PathBuf::from(".")
+                }
+            }
+        };
 
-        let path = PathBuf::from(arguments[1].to_owned());
 
         if !path.is_file() && !path.is_dir() {
             let reason = format!(
                 "`{}` is neither a valid file path nor a valid dir path",
-                arguments[1]
+                path.display()
             );
             Self::exit(Some(&reason))
         }
 
-        self.pattern = Some(arguments[0].to_owned());
+        println!("{:?}",options);
+
+        let pattern = pattern.unwrap();
+
+        self.pattern = Some(pattern.clone());
         self.path = Some(path);
 
         Ok(Locator::new(
             ThreadPool::new(17),
-            arguments[0].to_owned(),
+            pattern,
             options,
         ))
     }

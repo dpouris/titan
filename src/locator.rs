@@ -6,6 +6,8 @@ use crate::GenericResult;
 use std::{fs::File, io::BufReader, path::PathBuf};
 mod process;
 
+const CHUNK_SIZE: usize = 1024 * 1024; // 1 MB
+
 pub struct Locator {
     pub pattern: String,
     pub amount: usize,
@@ -61,7 +63,7 @@ impl Locator {
         }
 
         if path.is_file() {
-            search_file(self.pattern.clone(), &path, &self.options)?;
+            search_file(&self.options, self.pattern.clone(), &path)?;
         } else if path.is_dir() {
             search_dir(&self.threadpool, &self.options, self.pattern.clone(), &path)?;
         }
@@ -76,15 +78,21 @@ impl Locator {
 
 fn search_dir(
     tp: &ThreadPool,
-    options: &Options,
+    opts: &Options,
     pattern: String,
-    dir_path: &PathBuf,
+    path: &PathBuf,
 ) -> GenericResult<()> {
-    let dir = dir_path.read_dir();
+    let dir = path.read_dir();
 
     if let Err(reason) = &dir {
-        handle_cannot_open_path(dir_path.display().to_string(), reason.to_string());
+        if !opts.hide_errors {
+            handle_cannot_open_path(path.display().to_color(Color::Blue), reason.to_color(Color::Red));
+        }
         return Ok(());
+    }
+
+    if opts.verbose {
+        println!("Directory: {dir}", dir = path.display().to_color(Color::Blue));
     }
 
     for path in dir? {
@@ -92,59 +100,58 @@ fn search_dir(
         let pathname = path.display().to_string();
         let pathname = pathname.split("/").last().unwrap();
 
-        if !options.hidden && pathname.starts_with('.') {
+        if !opts.hidden && pathname.starts_with('.') {
             continue;
         }
 
         if path.is_file() {
-            if options.is_parallel {
+            if opts.is_parallel {
                 let t_pattern = pattern.clone();
                 let t_path = path.clone();
-                let t_options = options.clone();
+                let t_opts = opts.clone();
 
                 tp.execute(move || {
-                    if let Err(_) = search_file(t_pattern.clone(), &t_path, &t_options) {
+                    if let Err(_) = search_file(&t_opts, t_pattern.clone(), &t_path) {
                         return;
                     }
                 });
             } else {
-                if let Err(_) = search_file(pattern.clone(), &path, &options) {
+                if let Err(_) = search_file(&opts, pattern.clone(), &path) {
                     return Ok(());
                 };
             }
         }
 
-        if path.is_dir() && options.is_recursive {
-            search_dir(&tp, &options, pattern.clone(), &path)?;
+        if path.is_dir() && opts.is_recursive {
+            search_dir(&tp, &opts, pattern.clone(), &path)?;
         }
     }
 
     Ok(())
 }
 
-fn search_file(pattern: String, file_path: &PathBuf, opts: &Options) -> GenericResult<()> {
-    let file = File::open(file_path)?;
+fn search_file(opts: &Options, pattern: String, path: &PathBuf) -> GenericResult<()> {
+    let file = File::open(path)?;
     let buf_reader = BufReader::new(&file);
-    let chunk_size = 1024 * 1024; // 1 MB
+    let chunk_size = CHUNK_SIZE;
 
     let chunks = read_chunks(buf_reader, chunk_size);
 
-    let invert_match = opts.invert_match;
     let handles = chunks
         .into_iter()
-        .map(|chunk| process_chunk(&pattern, chunk, invert_match))
+        .map(|chunk| process_chunk(&pattern, chunk, opts.invert_match))
         .collect::<Vec<Vec<Match>>>();
 
     let matches = handles.into_iter().flatten().collect::<Vec<Match>>();
 
     if !matches.is_empty() {
         let matches = matches.into_iter().collect::<Vec<String>>().join("\n");
-        println!("\n{}\n{matches}", file_path.display().to_color(Color::Blue));
+        println!("\n{}\n{matches}", path.display().to_color(Color::Blue));
     }
 
     Ok(())
 }
 
 fn handle_cannot_open_path(pathname: String, reason: String) {
-    println!("{pathname}: {reason}");
+    eprintln!("{pathname}: {reason}");
 }
