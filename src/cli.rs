@@ -12,6 +12,7 @@ extern crate atty;
 pub struct Cli {
     pub pattern: Option<String>,
     pub path: Option<PathBuf>,
+    pub content: Option<String>
 }
 
 mod parser;
@@ -21,6 +22,7 @@ impl Cli {
         Cli {
             pattern: None,
             path: None,
+            content: None
         }
     }
 
@@ -48,10 +50,9 @@ impl Cli {
                     let content: Vec<String> = io::stdin()
                         .lock()
                         .lines().filter(|line| line.is_ok()).map(|line| line.unwrap()).collect();
-                    PathBuf::from(content.join("\n"))
-                } else {
-                    PathBuf::from(".")
-                }
+                    self.content = Some(String::from(content.join("\n")));
+                } 
+                PathBuf::from(".")
             }
         };
 
@@ -63,8 +64,6 @@ impl Cli {
             );
             Self::exit(Some(&reason))
         }
-
-        println!("{:?}",options);
 
         let pattern = pattern.unwrap();
 

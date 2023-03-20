@@ -19,11 +19,17 @@ static GLOBAL_THREAD_COUNT: AtomicUsize = AtomicUsize::new(0);
 fn main() -> GenericResult<()> {
     let mut cli = Cli::new();
     let mut locator = cli.parse().expect("could not parse arguments");
+    let pattern = cli.pattern.unwrap();
     let path = cli.path.unwrap();
+
+    if let Some(content) = cli.content {
+        locator.search_content(&pattern, content);
+        return Ok(());
+    }
 
     println!(
         "Searching for {} in {}",
-        cli.pattern.unwrap(),
+        pattern,
         path.display()
     );
 

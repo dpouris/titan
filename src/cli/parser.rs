@@ -43,7 +43,6 @@ pub fn parse_args(args: Args) -> (Option<String>, Option<PathBuf>, Vec<ArgKey>) 
         }
     }
 
-    println!("{parsed_flags:?}");
     (pattern, path, parsed_flags)
 }
 

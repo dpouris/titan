@@ -71,6 +71,27 @@ impl Locator {
         Ok(())
     }
 
+    pub fn search_content(&self, pattern: &String, content: String) -> GenericResult<()> {
+        let buf_reader = BufReader::new(content.as_bytes());
+        let chunk_size = CHUNK_SIZE;
+
+        let chunks = read_chunks(buf_reader, chunk_size);
+
+        let handles = chunks
+            .into_iter()
+            .map(|chunk| process_chunk(&pattern, chunk, false))
+            .collect::<Vec<Vec<Match>>>();
+
+        let matches = handles.into_iter().flatten().collect::<Vec<Match>>();
+
+        if !matches.is_empty() {
+            let matches = matches.into_iter().collect::<Vec<String>>().join("\n");
+            println!("\n{matches}");
+        }
+
+        Ok(())
+    }
+
     pub fn join_all_threads(self) {
         self.threadpool.join_all()
     }
