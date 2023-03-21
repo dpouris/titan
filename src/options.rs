@@ -11,7 +11,7 @@ pub struct Options {
     pub hidden: bool,
     pub show_errors: bool,
     pub verbose: bool,
-    pub is_case_insensitive: bool,
+    pub ignore_case: bool,
 }
 
 impl Options {
@@ -26,7 +26,7 @@ impl Options {
             hidden: false,
             show_errors: false,
             verbose: false,
-            is_case_insensitive: false,
+            ignore_case: false,
         }
     }
 
@@ -36,7 +36,7 @@ impl Options {
                 "r" => self.is_recursive = true,
                 "v" => self.invert_match = true,
                 "x" => self.show_errors = true,
-                "i" => self.is_case_insensitive = true,
+                "i" => self.ignore_case = true,
                 "h" => self.show_help = true,
                 _ => {}
             },
@@ -48,7 +48,7 @@ impl Options {
                 "hidden" => self.hidden = true,
                 "show-errors" => self.show_errors = true,
                 "verbose" => self.verbose = true,
-                "invesensitive" => self.is_case_insensitive = true,
+                "ignore-case" => self.ignore_case = true,
                 _ => {}
             },
             ArgKey::LongWithArgs((long_key, options)) => match long_key.as_str() {
