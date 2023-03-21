@@ -43,26 +43,22 @@ pub(crate) fn read_chunks<R: Read>(mut reader: BufReader<R>, chunk_size: usize) 
     chunks
 }
 
-pub(crate) fn process_chunk(pattern: &Regex, chunk: String, invert: bool) -> Vec<Match> {
+pub(crate) fn process_chunk(pattern: &Regex, chunk: String, invert_match: bool) -> Vec<Match> {
     let mut matches = Vec::with_capacity(chunk.lines().count());
     let mut line_idx = 0;
     // use regex to find matches and replace the matches with colored text
     for line in chunk.lines() {
         line_idx += 1;
-        if pattern.is_match(line) {
-            let content = if invert {
-                line.to_string()
-            } else {
-                pattern
-                    .replace_all(line, |caps: &regex::Captures| {
-                        caps[0].to_color(Color::Red).to_string()
-                    })
-                    .to_string()
-            };
+        if pattern.is_match(line) && !invert_match {
+            let content = pattern.replace_all(line, |caps: &regex::Captures| {
+                                                        caps[0].to_color(Color::Red).to_string()
+                                                    })
+                                                    .to_string();
             matches.push(Match::new(content, line_idx.to_color(Color::Yellow)));
+        } else if !pattern.is_match(line) && invert_match {
+            matches.push(Match::new(line.to_color(Color::Red), line_idx.to_color(Color::Yellow)));
         }
     }
 
     matches
-    
 }

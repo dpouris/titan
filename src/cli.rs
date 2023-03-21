@@ -29,7 +29,7 @@ impl Cli {
     }
 
     pub fn parse(&mut self) -> GenericResult<Locator> {
-        let (pattern, path, parsed_args) = parse_flags(args());
+        let (pattern, path, parsed_args) = parse_flags(args())?;
         let mut options = Options::new();
 
         for arg in parsed_args {
@@ -63,7 +63,6 @@ impl Cli {
             Self::exit(Some(&reason))
         }
 
-        let pattern = pattern.unwrap();
         let pattern = format!(r"{}", &pattern);
         let mut builder = RegexBuilder::new(&pattern);
         let re_pattern = builder.case_insensitive(options.is_case_insensitive).build().unwrap();
@@ -92,22 +91,22 @@ impl Cli {
     titan <PATTERN> [FILES] [FLAGS] [OPTIONS]
         
 FLAGS:
-    -i, --invesensitive    Perform case-insensitive matching
-    -r, --recursive           Search directories recursively
-    -v, --invert_match           Select non-matching lines
-    -h, --help              Show this help message and exit
-    --hidden                 Search hidden files and directories
-    -x, --show_errors            Do not display error messages
-    --verbose                Show additional information during execution
-    --single-thread            Disable parallel execution
+    -i, --invesensitive         Perform case-insensitive matching
+    -r, --recursive             Search directories recursively
+    -v, --invert_match          Select non-matching lines
+    -h, --help                  Show this help message and exit
+    --hidden                    Search hidden files and directories
+    -x, --show_errors           Do not display error messages
+    --verbose                   Show additional information during execution
+    --single-thread             Disable parallel execution
         
 OPTIONS:
-    --ignore <PATTERN>...           Exclude files or directories matching the specified pattern(s)
+    --ignore <PATTERN>...       Exclude files or directories matching the specified pattern(s)
     --include <EXTENSION>...    Search files with the specified extension(s)
         
 ARGS:
-    <PATTERN>    Specify the regex pattern to match
-    <FILES>      Specify the file(s) or directory(ies) to search (optional) "
+    <PATTERN>                   Specify the regex pattern to match
+    <FILES>                     Specify the file(s) or directory(ies) to search (optional) "
         );
     }
 }
