@@ -19,4 +19,4 @@ pub trait Colorize: Display {
     }
 }
 
-impl<T> Colorize for T where T: Display {}
+impl<T> Colorize for T where T: Display + ?Sized {}
