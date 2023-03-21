@@ -54,7 +54,7 @@ impl Locator {
 
     pub fn search(&mut self, path: Option<&PathBuf>, content: Option<String>) -> GenericResult<()> {
         if let Some(content) = content {
-            search_inline(&self.options, self.pattern.clone(), content);
+            search_inline(&self.options, self.pattern.clone(), content)?;
             return Ok(());
         }
         let path = path.unwrap();

@@ -23,7 +23,7 @@ fn main() -> GenericResult<()> {
     );
     
     if let Some(content) = cli.inline {
-        locator.search(Some(&path), Some(content));
+        locator.search(Some(&path), Some(content))?;
         return Ok(());
     } else {
         locator.search(Some(&path), None)?;
