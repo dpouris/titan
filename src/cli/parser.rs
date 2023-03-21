@@ -7,8 +7,6 @@ pub enum ArgKey {
     LongWithArgs((String, Vec<String>)),
 }
 
-// State machine for parsing arguments
-
 pub fn parse_flags(args: std::env::Args) -> Result<(String, Option<PathBuf>, Vec<ArgKey>), String> {
     let mut args_iter = args.skip(1);
     let mut pattern = String::new();
@@ -17,7 +15,7 @@ pub fn parse_flags(args: std::env::Args) -> Result<(String, Option<PathBuf>, Vec
     // Check for the "--help" flag
     if let Some(arg) = args_iter.next() {
         if arg == "--help" {
-            return Ok((pattern, Some(PathBuf::new()), vec![ArgKey::Long(String::from("help"))]));
+            return Ok((pattern, path, vec![ArgKey::Long(String::from("help"))]));
         } else {
             pattern = arg;
         }
