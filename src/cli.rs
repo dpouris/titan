@@ -65,7 +65,7 @@ impl Cli {
 
         let pattern = format!(r"{}", &pattern);
         let mut builder = RegexBuilder::new(&pattern);
-        let re_pattern = builder.case_insensitive(options.is_case_insensitive).build().unwrap();
+        let re_pattern = builder.case_insensitive(options.ignore_case).build().unwrap();
 
         self.pattern = Some(pattern.clone());
         self.path = Some(path);
@@ -91,7 +91,7 @@ impl Cli {
     titan <PATTERN> [FILES] [FLAGS] [OPTIONS]
         
 FLAGS:
-    -i, --invesensitive         Perform case-insensitive matching
+    -i, --ingore-case           Perform case-insensitive matching
     -r, --recursive             Search directories recursively
     -v, --invert_match          Select non-matching lines
     -h, --help                  Show this help message and exit
