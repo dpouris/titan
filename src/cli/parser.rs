@@ -15,58 +15,43 @@ enum State {
     Options
 }
 
-pub fn parse_flags(args: Args) -> (Option<String>, Option<PathBuf>, Vec<ArgKey>) {
-   // parse the arguments with a state machine
-   let mut state = State::Pattern;
-   let mut pattern = None;
-   let mut path = None;
-   let mut parsed_flags = vec![];
+pub fn parse_flags(args: std::env::Args) -> Result<(String, Option<PathBuf>, Vec<ArgKey>), String> {
+    let mut args_iter = args.skip(1);
+    let mut pattern = String::new();
+    let mut path = None;
 
-   let mut args_iter = args.skip(1);
+    // Check for the "--help" flag
+    if let Some(arg) = args_iter.next() {
+        if arg == "--help" {
+            return Ok((pattern, Some(PathBuf::new()), vec![ArgKey::Long(String::from("help"))]));
+        } else {
+            pattern = arg;
+        }
+    } else {
+        return Err(String::from("Missing required argument: pattern"));
+    }
 
-   while let Some(arg) = parse_arg(&mut args_iter) {
-       match state {
-           State::Pattern => {
-               match arg {
-                   ArgKey::Long(s) => {
-                       pattern = Some(s);
-                       state = State::Path;
-                   },
-                   ArgKey::Short(s) => {
-                       pattern = Some(s);
-                       state = State::Path;
-                   },
-                   ArgKey::LongWithArgs(_) => {
-                       parsed_flags.push(arg);
-                   }
-               }
-           },
-           State::Path => {
-               match arg {
-                   ArgKey::Long(s) => {
-                       path = Some(PathBuf::from(s));
-                       state = State::Options;
-                   },
-                   ArgKey::Short(s) => {
-                       path = Some(PathBuf::from(s));
-                       state = State::Options;
-                   },
-                   ArgKey::LongWithArgs(_) => {
-                       state = State::Options;
-                       parsed_flags.push(arg);
-                   }
-               }
-           },
-           State::Options => {
-               parsed_flags.push(arg);
-           }
-       }
-   }
+    let mut parsed_flags = vec![];
 
-   (pattern, path, parsed_flags)
+    if let Some(arg) = args_iter.next() {
+        if !arg.starts_with('-') {
+            path = Some(PathBuf::from(arg));
+        } else {
+            let mut path_iter = std::iter::once(arg.clone());
+            while let Some(arg) = parse_arg(&mut path_iter) {
+                parsed_flags.push(arg);
+            }
+        }
+    }
+    while let Some(arg) = parse_arg(&mut args_iter) {
+        parsed_flags.push(arg);
+    }
+    
+    Ok((pattern, path, parsed_flags))
 }
 
-fn parse_arg(args: &mut Skip<Args>) -> Option<ArgKey> {
+
+fn parse_arg(args: &mut impl Iterator<Item = String>) -> Option<ArgKey> {
     if let Some(arg) = args.next() {
         if arg.starts_with("--") {
             let stripped_flag = arg.strip_prefix("--").unwrap();
