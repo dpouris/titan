@@ -12,7 +12,7 @@ extern crate atty;
 pub struct Cli {
     pub pattern: Option<String>,
     pub path: Option<PathBuf>,
-    pub content: Option<String>
+    pub inline: Option<String>
 }
 
 mod parser;
@@ -22,7 +22,7 @@ impl Cli {
         Cli {
             pattern: None,
             path: None,
-            content: None
+            inline: None
         }
     }
 
@@ -50,7 +50,7 @@ impl Cli {
                     let content: Vec<String> = io::stdin()
                         .lock()
                         .lines().filter(|line| line.is_ok()).map(|line| line.unwrap()).collect();
-                    self.content = Some(String::from(content.join("\n")));
+                    self.inline = Some(String::from(content.join("\n")));
                 } 
                 PathBuf::from(".")
             }
