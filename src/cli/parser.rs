@@ -1,4 +1,4 @@
-use std::{env::Args, path::PathBuf, iter::Skip};
+use std::path::PathBuf;
 
 #[derive(Debug, Eq, Hash, PartialEq)]
 pub enum ArgKey {
@@ -8,12 +8,6 @@ pub enum ArgKey {
 }
 
 // State machine for parsing arguments
-#[derive(Debug, Eq, PartialEq)]
-enum State {
-    Pattern,
-    Path,
-    Options
-}
 
 pub fn parse_flags(args: std::env::Args) -> Result<(String, Option<PathBuf>, Vec<ArgKey>), String> {
     let mut args_iter = args.skip(1);
