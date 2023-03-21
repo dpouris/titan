@@ -1,3 +1,5 @@
+use regex::Regex;
+
 use self::process::{process_chunk, read_chunks};
 use crate::color::{Color, Colorize};
 use crate::options::Options;
@@ -10,7 +12,7 @@ mod process;
 const CHUNK_SIZE: usize = 1024 * 1024; // 1 MB
 
 pub struct Locator {
-    pub pattern: String,
+    pub pattern: Regex,
     pub amount: usize,
     threadpool: ThreadPool,
     options: Options,
@@ -43,7 +45,7 @@ impl FromIterator<Match> for Vec<String> {
 }
 
 impl Locator {
-    pub fn new(tp: ThreadPool, pattern: String, opts: Options) -> Locator {
+    pub fn new(tp: ThreadPool, pattern: Regex, opts: Options) -> Locator {
         Locator {
             pattern,
             amount: 0,
@@ -54,7 +56,7 @@ impl Locator {
 
     pub fn search(&mut self, path: Option<&PathBuf>, content: Option<String>) -> GenericResult<()> {
         if let Some(content) = content {
-            search_inline(&self.options, self.pattern.clone(), content);
+            search_inline(&self.options, &self.pattern.clone(), content)?;
             return Ok(());
         }
         let path = path.unwrap();
@@ -70,9 +72,9 @@ impl Locator {
         }
 
         if path.is_file() {
-            search_file(&self.options, self.pattern.clone(), &path)?;
+            search_file(&self.options, &self.pattern.clone(), &path)?;
         } else if path.is_dir() {
-            search_dir(&self.threadpool, &self.options, self.pattern.clone(), &path)?;
+            search_dir(&self.threadpool, &self.options, &self.pattern.clone(), &path)?;
         }
 
         Ok(())
@@ -86,13 +88,13 @@ impl Locator {
 fn search_dir(
     tp: &ThreadPool,
     opts: &Options,
-    pattern: String,
+    pattern: &Regex,
     path: &PathBuf,
 ) -> GenericResult<()> {
     let dir = path.read_dir();
 
     if let Err(reason) = &dir {
-        if !opts.hide_errors {
+        if !opts.show_errors {
             handle_cannot_open_path(path.display().to_color(Color::Blue), reason.to_color(Color::Red));
         }
         return Ok(());
@@ -118,39 +120,39 @@ fn search_dir(
                 let t_opts = opts.clone();
 
                 tp.execute(move || {
-                    if let Err(_) = search_file(&t_opts, t_pattern.clone(), &t_path) {
+                    if let Err(_) = search_file(&t_opts, &t_pattern.clone(), &t_path) {
                         return;
                     }
                 });
             } else {
-                if let Err(_) = search_file(&opts, pattern.clone(), &path) {
+                if let Err(_) = search_file(&opts, &pattern.clone(), &path) {
                     return Ok(());
                 };
             }
         }
 
         if path.is_dir() && opts.is_recursive {
-            search_dir(&tp, &opts, pattern.clone(), &path)?;
+            search_dir(&tp, &opts, &pattern.clone(), &path)?;
         }
     }
 
     Ok(())
 }
 
-fn search_file(opts: &Options, pattern: String, path: &PathBuf) -> GenericResult<()> {
+fn search_file(opts: &Options, pattern: &Regex, path: &PathBuf) -> GenericResult<()> {
     let file = File::open(path)?;
     let buf_reader = BufReader::new(&file);
 
     get_matches(opts, pattern, Some(path), buf_reader)
 }
 
-fn search_inline(opts: &Options, pattern: String, content: String) -> GenericResult<()> {
+fn search_inline(opts: &Options, pattern: &Regex, content: String) -> GenericResult<()> {
     let buf_reader = BufReader::new(content.as_bytes());
 
-    get_matches(opts, pattern.clone(), None, buf_reader)
+    get_matches(opts, &pattern.clone(), None, buf_reader)
 }
 
-fn get_matches(opts: &Options, pattern: String, path: Option<&PathBuf>, buf: BufReader<impl Read>) -> GenericResult<()> {
+fn get_matches(opts: &Options, pattern: &Regex, path: Option<&PathBuf>, buf: BufReader<impl Read>) -> GenericResult<()> {
     let chunks = read_chunks(buf, CHUNK_SIZE);
 
     let handles = chunks

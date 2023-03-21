@@ -9,8 +9,9 @@ pub struct Options {
     pub invert_match: bool,
     pub show_help: bool,
     pub hidden: bool,
-    pub hide_errors: bool,
+    pub show_errors: bool,
     pub verbose: bool,
+    pub is_case_insensitive: bool,
 }
 
 impl Options {
@@ -23,8 +24,9 @@ impl Options {
             invert_match: false,
             show_help: false,
             hidden: false,
-            hide_errors: true,
+            show_errors: false,
             verbose: false,
+            is_case_insensitive: false,
         }
     }
 
@@ -33,7 +35,9 @@ impl Options {
             ArgKey::Short(short_key) => match short_key.as_str() {
                 "r" => self.is_recursive = true,
                 "v" => self.invert_match = true,
-                "x" => self.hide_errors = false,
+                "x" => self.show_errors = true,
+                "i" => self.is_case_insensitive = true,
+                "h" => self.show_help = true,
                 _ => {}
             },
             ArgKey::Long(long_key) => match long_key.as_str() {
@@ -42,8 +46,9 @@ impl Options {
                 "invert-match" => self.invert_match = true,
                 "help" => self.show_help = true,
                 "hidden" => self.hidden = true,
-                "show-errors" => self.hide_errors = false,
+                "show-errors" => self.show_errors = true,
                 "verbose" => self.verbose = true,
+                "invesensitive" => self.is_case_insensitive = true,
                 _ => {}
             },
             ArgKey::LongWithArgs((long_key, options)) => match long_key.as_str() {

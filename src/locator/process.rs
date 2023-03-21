@@ -1,5 +1,7 @@
 use std::io::{BufRead, BufReader, Read};
 
+use regex::Regex;
+
 use crate::color::{Color, Colorize};
 
 use super::Match;
@@ -41,25 +43,26 @@ pub(crate) fn read_chunks<R: Read>(mut reader: BufReader<R>, chunk_size: usize) 
     chunks
 }
 
-pub(crate) fn process_chunk(pattern: &String, chunk: String, invert: bool) -> Vec<Match> {
+pub(crate) fn process_chunk(pattern: &Regex, chunk: String, invert: bool) -> Vec<Match> {
     let mut matches = Vec::with_capacity(chunk.lines().count());
     let mut line_idx = 0;
+    // use regex to find matches and replace the matches with colored text
     for line in chunk.lines() {
         line_idx += 1;
-        if invert && !line.contains(pattern) {
-            matches.push(Match::new(
-                line.to_owned(),
-                line_idx.to_color(Color::Yellow),
-            ));
-        } 
-        
-        if !invert && line.contains(pattern){
-            let line = line.replace(pattern, &pattern.to_color(Color::Red));
-            let new_match = Match::new(line.to_owned(), line_idx.to_color(Color::Yellow));
-    
-            matches.push(new_match)
+        if pattern.is_match(line) {
+            let content = if invert {
+                line.to_string()
+            } else {
+                pattern
+                    .replace_all(line, |caps: &regex::Captures| {
+                        caps[0].to_color(Color::Red).to_string()
+                    })
+                    .to_string()
+            };
+            matches.push(Match::new(content, line_idx.to_color(Color::Yellow)));
         }
-
     }
+
     matches
+    
 }

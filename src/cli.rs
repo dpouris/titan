@@ -1,11 +1,13 @@
 use std::io::{self, BufRead};
 use std::{env::args, path::PathBuf};
 
+use regex::{RegexBuilder};
+
 use crate::worker::threadpool::ThreadPool;
 use crate::GenericResult;
 use crate::{locator::Locator, options::Options};
 
-pub use self::parser::{parse_args, ArgKey};
+pub use self::parser::{parse_flags, ArgKey};
 
 extern crate atty;
 
@@ -27,7 +29,7 @@ impl Cli {
     }
 
     pub fn parse(&mut self) -> GenericResult<Locator> {
-        let (pattern, path, parsed_args) = parse_args(args());
+        let (pattern, path, parsed_args) = parse_flags(args());
         let mut options = Options::new();
 
         for arg in parsed_args {
@@ -37,10 +39,6 @@ impl Cli {
         if options.show_help {
             Self::help();
             Self::exit(None)
-        }
-
-        if pattern.is_none() && path.is_none() {
-            Self::exit(Some("missing <pattern> argument"))
         }
 
         let path = match path {
@@ -66,13 +64,16 @@ impl Cli {
         }
 
         let pattern = pattern.unwrap();
+        let pattern = format!(r"{}", &pattern);
+        let mut builder = RegexBuilder::new(&pattern);
+        let re_pattern = builder.case_insensitive(options.is_case_insensitive).build().unwrap();
 
         self.pattern = Some(pattern.clone());
         self.path = Some(path);
 
         Ok(Locator::new(
             ThreadPool::new(17),
-            pattern,
+            re_pattern,
             options,
         ))
     }
@@ -87,12 +88,26 @@ impl Cli {
 
     pub fn help() {
         println!(
-            "
-USAGE:
-    grile <pattern> <path>
-
+"USAGE:
+    titan <PATTERN> [FILES] [FLAGS] [OPTIONS]
+        
+FLAGS:
+    -i, --invesensitive    Perform case-insensitive matching
+    -r, --recursive           Search directories recursively
+    -v, --invert_match           Select non-matching lines
+    -h, --help              Show this help message and exit
+    --hidden                 Search hidden files and directories
+    -x, --show_errors            Do not display error messages
+    --verbose                Show additional information during execution
+    --single-thread            Disable parallel execution
+        
 OPTIONS:
-"
+    --ignore <PATTERN>...           Exclude files or directories matching the specified pattern(s)
+    --include <EXTENSION>...    Search files with the specified extension(s)
+        
+ARGS:
+    <PATTERN>    Specify the regex pattern to match
+    <FILES>      Specify the file(s) or directory(ies) to search (optional) "
         );
     }
 }

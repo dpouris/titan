@@ -5,7 +5,7 @@ mod options;
 mod worker;
 
 use cli::Cli;
-use std::error::Error;
+use std::{error::Error};
 
 pub type GenericResult<T> = Result<T, Box<dyn Error>>;
 
@@ -23,7 +23,7 @@ fn main() -> GenericResult<()> {
     );
     
     if let Some(content) = cli.inline {
-        locator.search(Some(&path), Some(content));
+        locator.search(Some(&path), Some(content))?;
         return Ok(());
     } else {
         locator.search(Some(&path), None)?;
